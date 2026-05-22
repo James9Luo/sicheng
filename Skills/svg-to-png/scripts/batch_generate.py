@@ -160,7 +160,7 @@ def main():
     parser.add_argument('-i', '--items', help='Items list (JSON file or comma-separated string)')
     parser.add_argument('-o', '--output-dir', default='output', help='Output directory')
     parser.add_argument('-w', '--width', type=int, default=68, help='Output width')
-    parser.add_argument('-h', '--height', type=int, default=68, help='Output height')
+    parser.add_argument('--height', type=int, default=68, help='Output height')
     parser.add_argument('--font-size', type=int, help='Font size')
     parser.add_argument('--font-family', default='Noto Sans SC', help='Font family')
     parser.add_argument('--color', default='#FFFFFF', help='Text color')
@@ -212,6 +212,10 @@ def main():
 
         # 基础变量
         base_vars = {}
+        if args.width:
+            base_vars['width'] = args.width
+        if args.height:
+            base_vars['height'] = args.height
         if args.font_size:
             base_vars['fontSize'] = args.font_size
         if args.font_family:

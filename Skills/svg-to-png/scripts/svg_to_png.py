@@ -91,7 +91,7 @@ Examples:
     parser.add_argument('input', help='Input SVG file path')
     parser.add_argument('output', help='Output PNG file path')
     parser.add_argument('-w', '--width', type=int, help='Output width in pixels')
-    parser.add_argument('-h', '--height', type=int, help='Output height in pixels')
+    parser.add_argument('--height', type=int, help='Output height in pixels')
     parser.add_argument('-s', '--scale', type=float, help='Scale factor')
     parser.add_argument('-b', '--background', help='Background color (RGBA format: R,G,B,A)')
 
