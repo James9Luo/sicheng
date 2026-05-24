@@ -121,16 +121,44 @@
     <text x="140.6" y="60.5">亥</text>
   </g>
 
-  <g font-family="'Noto Sans CJK SC', sans-serif" font-size="24" fill="#FFFFFF">
-    <text x="320" y="120">子</text>
-    <text x="320" y="152">初</text>
-    <text x="320" y="184">一</text>
-    <text x="320" y="216">刻</text>
+  <!-- 电量 - 竖向中轴线最顶端 -->
+  <g font-family="'Noto Sans CJK SC', sans-serif" font-size="20" fill="#FFFFFF" text-anchor="middle">
+    <text x="250" y="78">100%</text>
   </g>
 
-  <g font-family="'Trajan Pro', 'Noto Serif SC', 'Source Han Serif SC', serif" font-size="96" fill="#FFFFFF">
-    <text x="165" y="160">12</text>
-    <text x="165" y="240">30</text>
+  <!-- 时辰 - 竖向中轴线上半部分居中对齐 -->
+  <g font-family="'Noto Sans CJK SC', sans-serif" font-size="28" fill="#FFFFFF" text-anchor="middle">
+    <text x="250" y="115">子</text>
+    <text x="250" y="147">初</text>
+    <text x="250" y="179">一</text>
+    <text x="250" y="211">刻</text>
+  </g>
+
+  <!-- 月份和星期 - 左上部分 -->
+  <g font-family="'Noto Sans CJK SC', sans-serif" fill="#FFFFFF">
+    <text x="145" y="180" font-size="24">WED</text>
+    <text x="115" y="205" font-size="24">26-AUG</text>
+  </g>
+
+  <!-- 数字时间 - 横向中轴线左侧居中对齐 -->
+  <g font-family="'Trajan Pro', 'Noto Serif SC', 'Source Han Serif SC', serif" font-size="56" fill="#FFFFFF" text-anchor="middle">
+    <text x="140" y="265">12:30</text>
+  </g>
+
+  <!-- 天气图标和温度 - 左下部分 -->
+  <g transform="translate(150, 300)">
+    <text x="20" y="0" font-family="'Noto Sans CJK SC', sans-serif" font-size="24" fill="#FFFFFF" text-anchor="middle">25° ☀</text>
+  </g>
+
+  <!-- 农历 - 横向中轴线右侧居中对齐 -->
+  <g font-family="'Noto Serif SC', 'Source Han Serif SC', serif" font-size="28" fill="#FFFFFF" text-anchor="middle">
+    <text x="385" y="255">二月初三</text>
+  </g>
+
+  <!-- 晴天 - 竖向中轴线下半部分居中对齐 -->
+  <g font-family="'Noto Sans CJK SC', sans-serif" font-size="28" fill="#FFFFFF" text-anchor="middle">
+    <text x="250" y="340">晴</text>
+    <text x="250" y="380">天</text>
   </g>
 
   <g fill="#FFFFFF">
