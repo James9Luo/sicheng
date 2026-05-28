@@ -12,6 +12,7 @@ WatchFace({
     // 动态元素引用
     let timeText = null;
     let shichenText = null;
+    let shichenTextAOD = null;
     let timeSensor = null;
     let weatherTypeText = null;
     let weatherIconText = null;
@@ -24,7 +25,7 @@ WatchFace({
     const WEATHER_TYPES = [
       '多云', '阵雨', '阵雪', '晴', '阴', '小雨', '小雪', '中雨',
       '中雪', '大雪', '大雨', '沙尘暴', '雨夹雪', '雾', '霾',
-      '雷阵雨', '暴雪', '浮尘', '特大暴雨', '雨加冰雹', '雷阵雨伴有冰雹',
+      '雷阵雨', '暴雪', '浮尘', '特大暴雨', '雨冰雹', '雷阵雨冰雹',
       '大暴雨', '扬尘', '强沙尘暴', '暴雨', '未知', '夜间多云', '夜间阵雨', '夜间晴'
     ];
 
@@ -200,6 +201,10 @@ WatchFace({
       }
     }
 
+    // 创建传感器（移到组件创建之前）
+    timeSensor = hmSensor.createSensor(hmSensor.id.TIME);
+    weatherSensor = hmSensor.createSensor(hmSensor.id.WEATHER);
+    
     // 创建背景图片
     hmUI.createWidget(hmUI.widget.IMG, {
       x: 0,
@@ -236,7 +241,7 @@ WatchFace({
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      line_spacing: 0,
+      line_space: 0,
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
@@ -282,12 +287,12 @@ WatchFace({
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      line_spacing: 0,
+      line_space: -8,
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
     // 创建时辰刻分文本 (垂直中轴线上半部分) - 息屏模式
-    const shichenTextAOD = hmUI.createWidget(hmUI.widget.TEXT, {
+    shichenTextAOD = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 210,
       y: 80,
       w: 80,
@@ -298,8 +303,8 @@ WatchFace({
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      line_spacing: -8,
-      show_level: hmUI.show_level.ONAL_AOD
+      line_space: -8,
+      show_level: hmUI.show_level.ONLY_AOD
     });
 
     // 创建天气类型文本（垂直中轴线下半部分）
@@ -314,7 +319,7 @@ WatchFace({
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      line_spacing: 0,
+      line_space: -8,
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
@@ -333,12 +338,6 @@ WatchFace({
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
-    // 创建时间传感器
-    timeSensor = hmSensor.createSensor(hmSensor.id.TIME);
-    
-    // 创建天气传感器
-    weatherSensor = hmSensor.createSensor(hmSensor.id.WEATHER);
-    
     // 监听秒变化（用于数字时间实时更新）
     timeSensor.addEventListener(timeSensor.event.SECONDEND, function() {
       updateDisplay();
