@@ -18,6 +18,7 @@ WatchFace({
     let weatherIconText = null;
     let weatherSensor = null;
     let batteryText = null;
+    let batterySensor = null;
     let dateText = null;
     let lunarText = null;
 
@@ -181,22 +182,31 @@ WatchFace({
       }
     }
 
-    // 更新农历显示（简化版，实际需要农历库）
+    // 更新农历显示（使用 Zepp OS 内置 API）
     function updateLunar() {
-      // 这里使用简化版农历显示，实际项目中需要使用农历计算库
-      const lunarMonths = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月'];
-      const lunarDays = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十', 
-                        '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
-                        '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
+      if (!timeSensor) return;
       
-      // 简化计算，实际需要农历转换算法
-      const now = new Date();
-      const lunarMonth = lunarMonths[(now.getMonth() + 11) % 12];
-      const lunarDay = lunarDays[(now.getDate() - 1) % 30];
+      const lunarMonth = timeSensor.lunar_month;
+      const lunarDay = timeSensor.lunar_day;
       
-      if (lunarText) {
-        lunarText.setProperty(hmUI.prop.MORE, {
-          text: lunarMonth + lunarDay
+      // 非中文系统下 lunar_month 和 lunar_day 为 0，不显示
+      if (lunarMonth > 0 && lunarDay > 0) {
+        if (lunarText) {
+          lunarText.setProperty(hmUI.prop.MORE, {
+            text: `${lunarMonth}月${lunarDay}`
+          });
+        }
+      }
+    }
+
+    // 更新电量显示
+    function updateBattery() {
+      if (!batterySensor) return;
+      
+      const currentBattery = batterySensor.current;
+      if (batteryText) {
+        batteryText.setProperty(hmUI.prop.MORE, {
+          text: currentBattery + '%'
         });
       }
     }
@@ -204,6 +214,7 @@ WatchFace({
     // 创建传感器（移到组件创建之前）
     timeSensor = hmSensor.createSensor(hmSensor.id.TIME);
     weatherSensor = hmSensor.createSensor(hmSensor.id.WEATHER);
+    batterySensor = hmSensor.createSensor(hmSensor.id.BATTERY);
     
     // 创建背景图片
     hmUI.createWidget(hmUI.widget.IMG, {
@@ -231,7 +242,7 @@ WatchFace({
 
     // 创建月份和星期显示（左上部分）
     dateText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 80,
+      x: 105,
       y: 150,
       w: 100,
       h: 80,
@@ -239,7 +250,7 @@ WatchFace({
       color: 0xFFFFFF,
       text_size: 24,
       text_style: hmUI.text_style.NONE,
-      align_h: hmUI.align.CENTER_H,
+      align_h: hmUI.align.RIGHT,
       align_v: hmUI.align.CENTER_V,
       line_space: 0,
       show_level: hmUI.show_level.ONLY_NORMAL
@@ -247,8 +258,8 @@ WatchFace({
 
     // 创建数字时间显示 (横向中轴线左侧居中)
     timeText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 0,
-      y: 235,
+      x: 5,
+      y: 225,
       w: 280,
       h: 40,
       text: '00:00',
@@ -257,13 +268,14 @@ WatchFace({
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      font_family: 'Trajan Pro'
+      font_family: 'Trajan Pro',
+      show_level: hmUI.show_level.ONLY_NORMAL
     });
 
     // 创建农历显示 (横向中轴线右侧居中)
     lunarText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 280,
-      y: 235,
+      y: 225,
       w: 200,
       h: 40,
       text: '二月初三',
@@ -272,18 +284,19 @@ WatchFace({
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      font_family: 'Noto Serif SC'
+      font_family: 'Noto Serif SC',
+      show_level: hmUI.show_level.ONLY_NORMAL
     });
 
     // 创建时辰刻分文本 (垂直中轴线上半部分) - 正常模式
     shichenText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 210,
+      x: 202,
       y: 80,
       w: 80,
       h: 140,
       text: '子\n初\n一\n刻',
       color: 0xFFFFFF,
-      text_size: 28,
+      text_size: 32,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
@@ -293,13 +306,13 @@ WatchFace({
 
     // 创建时辰刻分文本 (垂直中轴线上半部分) - 息屏模式
     shichenTextAOD = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 210,
+      x: 202,
       y: 80,
       w: 80,
       h: 140,
       text: '子\n初\n一\n刻',
       color: 0xFFFFFF,
-      text_size: 26,
+      text_size: 32,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
@@ -309,13 +322,13 @@ WatchFace({
 
     // 创建天气类型文本（垂直中轴线下半部分）
     weatherTypeText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 210,
+      x: 202,
       y: 300,
       w: 80,
       h: 80,
       text: '晴\n天',
       color: 0xFFFFFF,
-      text_size: 28,
+      text_size: 32,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
@@ -326,7 +339,7 @@ WatchFace({
     // 创建天气图标和温度文本（左下部分）
     weatherIconText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 120,
-      y: 300,
+      y: 275,
       w: 120,
       h: 40,
       text: '25° ☀',
@@ -348,11 +361,17 @@ WatchFace({
       updateDisplay();
     });
 
+    // 监听电量变化
+    batterySensor.addEventListener(batterySensor.event.CHANGE, function() {
+      updateBattery();
+    });
+
     // 初始化显示
     updateDisplay();
     updateWeather();
     updateDate();
     updateLunar();
+    updateBattery();
   },
 
   onDestroy() {
