@@ -63,33 +63,48 @@ WatchFace({
       28: '🌙'   // 夜间晴
     };
 
-    // 计算当前时辰索引 (0-11)
-    function getShichenIndex(hour, minute) {
-      const totalMinutes = hour * 60 + minute;
-      let offset = totalMinutes - 1380; // 子时开始于 23:00 = 1380 分钟
-      if (offset < 0) offset += 1440; // 跨天处理
-      return Math.floor(offset / 120) % 12;
-    }
-
-    // 获取时辰刻分文本
-    function getShichenText(hour, minute) {
-      const shichenIndex = getShichenIndex(hour, minute);
-      const shichen = SHICHEN[shichenIndex];
-      const keMinute = minute % 60;
-      const ke = Math.floor(keMinute / 15);
+    // 获取时辰刻分文本（基于秒的精确计算）
+    function getShichenText(hour, minute, second) {
+      // 计算当前时辰内的总秒数
+      const totalSeconds = hour * 3600 + minute * 60 + second;
+      let offset = totalSeconds - 82800; // 子时开始于 23:00 = 82800 秒
+      if (offset < 0) offset += 86400; // 跨天处理
       
-      let text = '';
-      if (ke === 0) {
-        text = shichen + '\n初\n一\n刻';
-      } else if (ke === 1) {
-        text = shichen + '\n初\n二\n刻';
-      } else if (ke === 2) {
-        text = shichen + '\n初\n三\n刻';
+      const shichenIndex = Math.floor(offset / 7200) % 12; // 每个时辰 7200 秒
+      const keSecond = offset % 7200; // 时辰内秒数
+      
+      const shichen = SHICHEN[shichenIndex];
+      
+      // 刻分判断（基于秒的精确计算）
+      // 每个时辰 7200 秒 = 2小时
+      // 前4刻: 0-3456秒 (0-864, 864-1728, 1728-2592, 2592-3456)
+      // 入: 3456-3600秒 (144秒)
+      // 后4刻: 3600-7056秒 (3600-4464, 4464-5328, 5328-6192, 6192-7056)
+      // 入: 7056-7200秒 (144秒)
+      
+      if (keSecond < 864) {
+        return shichen + '\n初\n一\n刻';
+      } else if (keSecond < 1728) {
+        return shichen + '\n初\n二\n刻';
+      } else if (keSecond < 2592) {
+        return shichen + '\n初\n三\n刻';
+      } else if (keSecond < 3456) {
+        return shichen + '\n正';
+      } else if (keSecond < 3600) {
+        const nextShichen = SHICHEN[(shichenIndex + 1) % 12];
+        return '入\n' + nextShichen + '\n初';
+      } else if (keSecond < 4464) {
+        return shichen + '\n正\n一\n刻';
+      } else if (keSecond < 5328) {
+        return shichen + '\n正\n二\n刻';
+      } else if (keSecond < 6192) {
+        return shichen + '\n正\n三\n刻';
+      } else if (keSecond < 7056) {
+        return shichen + '\n正\n四\n刻';
       } else {
         const nextShichen = SHICHEN[(shichenIndex + 1) % 12];
-        text = '入\n' + nextShichen + '\n初';
+        return '入\n' + nextShichen + '\n初';
       }
-      return text;
     }
 
     // 更新显示
@@ -98,6 +113,7 @@ WatchFace({
       
       const hour = timeSensor.hour;
       const minute = timeSensor.minute;
+      const second = timeSensor.second;
       
       if (timeText) {
         const hourStr = String(hour).padStart(2, '0');
@@ -109,13 +125,13 @@ WatchFace({
       
       if (shichenText) {
         shichenText.setProperty(hmUI.prop.MORE, {
-          text: getShichenText(hour, minute)
+          text: getShichenText(hour, minute, second)
         });
       }
       
       if (shichenTextAOD) {
         shichenTextAOD.setProperty(hmUI.prop.MORE, {
-          text: getShichenText(hour, minute)
+          text: getShichenText(hour, minute, second)
         });
       }
       
@@ -204,9 +220,19 @@ WatchFace({
       if (!batterySensor) return;
       
       const currentBattery = batterySensor.current;
+      // 根据电量选择电池图标
+      let batteryIcon = '🔋';
+      if (currentBattery <= 20) {
+        batteryIcon = '🪫'; // 低电量
+      } else if (currentBattery <= 50) {
+        batteryIcon = '🔋'; // 中电量
+      } else {
+        batteryIcon = '⚡'; // 高电量/充电中
+      }
+      
       if (batteryText) {
         batteryText.setProperty(hmUI.prop.MORE, {
-          text: currentBattery + '%'
+          text: batteryIcon + ' ' + currentBattery + '%'
         });
       }
     }
@@ -222,20 +248,21 @@ WatchFace({
       y: 0,
       w: 480,
       h: 480,
-      src: 'background.png'
+      src: 'background.png',
+      show_level: hmUI.show_level.ONLY_NORMAL
     });
 
     // 创建电量显示（竖向中轴线最顶端）
     batteryText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 210,
-      y: 50,
+      x: 105,
+      y: 130,
       w: 80,
       h: 40,
       text: '100%',
       color: 0xFFFFFF,
       text_size: 20,
       text_style: hmUI.text_style.NONE,
-      align_h: hmUI.align.CENTER_H,
+      align_h: hmUI.align.RIGHT,
       align_v: hmUI.align.CENTER_V,
       show_level: hmUI.show_level.ONLY_NORMAL
     });
@@ -351,19 +378,29 @@ WatchFace({
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
-    // 监听秒变化（用于数字时间实时更新）
-    timeSensor.addEventListener(timeSensor.event.SECONDEND, function() {
-      updateDisplay();
-    });
-    
     // 监听分钟变化（用于时辰刻分更新）
     timeSensor.addEventListener(timeSensor.event.MINUTEEND, function() {
       updateDisplay();
     });
 
+    // 使用 timer.createTimer 每秒更新（官方推荐方式）
+    timer.createTimer(0, 1000, function(ts) {
+      updateDisplay();
+    }, timeSensor);
+
     // 监听电量变化
     batterySensor.addEventListener(batterySensor.event.CHANGE, function() {
       updateBattery();
+    });
+
+    // 监听屏幕恢复（从息屏唤醒时更新显示）
+    hmUI.createWidget(hmUI.widget.WIDGET_DELEGATE, {
+      resume_call: function() {
+        updateDisplay();
+        updateDate();
+        updateLunar();
+        updateBattery();
+      }
     });
 
     // 初始化显示
