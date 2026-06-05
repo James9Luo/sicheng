@@ -15,6 +15,7 @@ WatchFace({
     let shichenTextAOD = null;
     let timeSensor = null;
     let weatherTypeText = null;
+    let weatherTypeTextAOD = null;  // AOD模式天气文本
     let weatherIconText = null;
     let weatherSensor = null;
     let batteryText = null;
@@ -63,7 +64,7 @@ WatchFace({
       28: '🌙'   // 夜间晴
     };
 
-    // 获取时辰刻分文本（基于秒的精确计算）
+    // 获取时辰刻分文本（基于 idea/数字要求.md 的刻分对照表）
     function getShichenText(hour, minute, second) {
       // 计算当前时辰内的总秒数
       const totalSeconds = hour * 3600 + minute * 60 + second;
@@ -74,35 +75,50 @@ WatchFace({
       const keSecond = offset % 7200; // 时辰内秒数
       
       const shichen = SHICHEN[shichenIndex];
+      const nextShichen = SHICHEN[(shichenIndex + 1) % 12];
       
-      // 刻分判断（基于秒的精确计算）
-      // 每个时辰 7200 秒 = 2小时
-      // 前4刻: 0-3456秒 (0-864, 864-1728, 1728-2592, 2592-3456)
-      // 入: 3456-3600秒 (144秒)
-      // 后4刻: 3600-7056秒 (3600-4464, 4464-5328, 5328-6192, 6192-7056)
-      // 入: 7056-7200秒 (144秒)
+      // 刻分判断（基于 idea/数字要求.md）
+      // 每个时辰 7200 秒 = 2小时，划分为 10 个状态
+      // 初: 0-863秒 (0-14:24)
+      // 初一刻: 864-1727秒 (14:24-28:48)
+      // 初二刻: 1728-2591秒 (28:48-43:12)
+      // 初三刻: 2592-3455秒 (43:12-57:36)
+      // 入正: 3456-3599秒 (57:36-60:00) - 显示"入X正"
+      // 正: 3600-4463秒 (60:00-74:24)
+      // 正一刻: 4464-5327秒 (74:24-88:48)
+      // 正二刻: 5328-6191秒 (88:48-103:12)
+      // 正三刻: 6192-7055秒 (103:12-117:36)
+      // 入下一个时辰: 7056-7199秒 (117:36-120:00) - 显示"入X初"
       
       if (keSecond < 864) {
-        return shichen + '\n初\n一\n刻';
+        // 初
+        return shichen + '\n初';
       } else if (keSecond < 1728) {
-        return shichen + '\n初\n二\n刻';
+        // 初一刻
+        return shichen + '\n初\n一\n刻';
       } else if (keSecond < 2592) {
-        return shichen + '\n初\n三\n刻';
+        // 初二刻
+        return shichen + '\n初\n二\n刻';
       } else if (keSecond < 3456) {
-        return shichen + '\n正';
+        // 初三刻
+        return shichen + '\n初\n三\n刻';
       } else if (keSecond < 3600) {
-        const nextShichen = SHICHEN[(shichenIndex + 1) % 12];
-        return '入\n' + nextShichen + '\n初';
+        // 入正 - 显示"入X正"
+        return '入\n' + shichen + '\n正';
       } else if (keSecond < 4464) {
-        return shichen + '\n正\n一\n刻';
+        // 正
+        return shichen + '\n正';
       } else if (keSecond < 5328) {
-        return shichen + '\n正\n二\n刻';
+        // 正一刻
+        return shichen + '\n正\n一\n刻';
       } else if (keSecond < 6192) {
-        return shichen + '\n正\n三\n刻';
+        // 正二刻
+        return shichen + '\n正\n二\n刻';
       } else if (keSecond < 7056) {
-        return shichen + '\n正\n四\n刻';
+        // 正三刻
+        return shichen + '\n正\n三\n刻';
       } else {
-        const nextShichen = SHICHEN[(shichenIndex + 1) % 12];
+        // 入下一个时辰 - 显示"入X初"
         return '入\n' + nextShichen + '\n初';
       }
     }
@@ -159,9 +175,16 @@ WatchFace({
         // 将天气类型竖式显示（每个字一行）
         const verticalWeatherType = weatherType.split('').join('\n');
         
-        // 更新天气类型文本（垂直中轴线下半部分）
+        // 更新天气类型文本（垂直中轴线下半部分）- 正常模式
         if (weatherTypeText) {
           weatherTypeText.setProperty(hmUI.prop.MORE, {
+            text: verticalWeatherType
+          });
+        }
+        
+        // 更新天气类型文本 - 息屏模式（降低亮度省电）
+        if (weatherTypeTextAOD) {
+          weatherTypeTextAOD.setProperty(hmUI.prop.MORE, {
             text: verticalWeatherType
           });
         }
@@ -202,16 +225,29 @@ WatchFace({
     function updateLunar() {
       if (!timeSensor) return;
       
-      const lunarMonth = timeSensor.lunar_month;
-      const lunarDay = timeSensor.lunar_day;
-      
-      // 非中文系统下 lunar_month 和 lunar_day 为 0，不显示
-      if (lunarMonth > 0 && lunarDay > 0) {
-        if (lunarText) {
-          lunarText.setProperty(hmUI.prop.MORE, {
-            text: `${lunarMonth}月${lunarDay}`
-          });
+      try {
+        // 使用 getLunarMonthCalendar 获取实时农历数据
+        const lunarCal = timeSensor.getLunarMonthCalendar();
+        const currentDay = timeSensor.day;  // 公历日期 1-31
+        
+        if (lunarCal && lunarCal.lunar_days_array && currentDay > 0) {
+          const lunarDay = lunarCal.lunar_days_array[currentDay - 1];
+          const lunarMonth = timeSensor.lunar_month;
+          
+          if (lunarDay > 0 && lunarMonth > 0) {
+            // 可选：获取节日信息
+            const festival = timeSensor.getShowFestival();
+            const festivalText = festival ? ` ${festival}` : '';
+            
+            if (lunarText) {
+              lunarText.setProperty(hmUI.prop.MORE, {
+                text: `${lunarMonth}月${lunarDay}${festivalText}`
+              });
+            }
+          }
         }
+      } catch (error) {
+        console.log('获取农历数据失败:', error);
       }
     }
 
@@ -220,20 +256,24 @@ WatchFace({
       if (!batterySensor) return;
       
       const currentBattery = batterySensor.current;
-      // 根据电量选择电池图标
+      
+      // 始终显示电池图标
       let batteryIcon = '🔋';
       if (currentBattery <= 20) {
         batteryIcon = '🪫'; // 低电量
-      } else if (currentBattery <= 50) {
-        batteryIcon = '🔋'; // 中电量
-      } else {
-        batteryIcon = '⚡'; // 高电量/充电中
       }
       
+      // 电量小于20%时显示电量数值，否则只显示图标
       if (batteryText) {
-        batteryText.setProperty(hmUI.prop.MORE, {
-          text: batteryIcon + ' ' + currentBattery + '%'
-        });
+        if (currentBattery <= 20) {
+          batteryText.setProperty(hmUI.prop.MORE, {
+            text: batteryIcon + ' ' + currentBattery + '%'
+          });
+        } else {
+          batteryText.setProperty(hmUI.prop.MORE, {
+            text: batteryIcon
+          });
+        }
       }
     }
 
@@ -254,13 +294,13 @@ WatchFace({
 
     // 创建电量显示（竖向中轴线最顶端）
     batteryText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 105,
-      y: 130,
-      w: 80,
-      h: 40,
+      x: 97,
+      y: 107,
+      w: 100,
+      h: 80,
       text: '100%',
       color: 0xFFFFFF,
-      text_size: 20,
+      text_size: 24,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.RIGHT,
       align_v: hmUI.align.CENTER_V,
@@ -269,8 +309,8 @@ WatchFace({
 
     // 创建月份和星期显示（左上部分）
     dateText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 105,
-      y: 150,
+      x: 97,
+      y: 147,
       w: 100,
       h: 80,
       text: 'WED\n26-AUG',
@@ -285,8 +325,8 @@ WatchFace({
 
     // 创建数字时间显示 (横向中轴线左侧居中)
     timeText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 5,
-      y: 225,
+      x: -5,
+      y: 222,
       w: 280,
       h: 40,
       text: '00:00',
@@ -301,13 +341,13 @@ WatchFace({
 
     // 创建农历显示 (横向中轴线右侧居中)
     lunarText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 280,
-      y: 225,
+      x: 260,
+      y: 222,
       w: 200,
       h: 40,
       text: '二月初三',
       color: 0xFFFFFF,
-      text_size: 28,
+      text_size: 32,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
@@ -318,36 +358,36 @@ WatchFace({
     // 创建时辰刻分文本 (垂直中轴线上半部分) - 正常模式
     shichenText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 202,
-      y: 80,
+      y: 56,
       w: 80,
-      h: 140,
+      h: 156,
       text: '子\n初\n一\n刻',
       color: 0xFFFFFF,
       text_size: 32,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      line_space: -8,
+      line_space: -20,
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
-    // 创建时辰刻分文本 (垂直中轴线上半部分) - 息屏模式
+    // 创建时辰刻分文本 (垂直中轴线上半部分) - 息屏模式（降低亮度省电）
     shichenTextAOD = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 202,
-      y: 80,
+      y: 56,
       w: 80,
-      h: 140,
+      h: 156,
       text: '子\n初\n一\n刻',
-      color: 0xFFFFFF,
+      color: 0x666666,  // AOD模式降低亮度
       text_size: 32,
       text_style: hmUI.text_style.NONE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      line_space: -8,
+      line_space: -20,
       show_level: hmUI.show_level.ONLY_AOD
     });
 
-    // 创建天气类型文本（垂直中轴线下半部分）
+    // 创建天气类型文本（垂直中轴线下半部分）- 正常模式
     weatherTypeText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 202,
       y: 300,
@@ -363,17 +403,33 @@ WatchFace({
       show_level: hmUI.show_level.ONLY_NORMAL
     });
 
+    // 创建天气类型文本（垂直中轴线下半部分）- 息屏模式（降低亮度省电）
+    weatherTypeTextAOD = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: 202,
+      y: 300,
+      w: 80,
+      h: 80,
+      text: '晴\n天',
+      color: 0x666666,  // AOD模式降低亮度
+      text_size: 32,
+      text_style: hmUI.text_style.NONE,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
+      line_space: -8,
+      show_level: hmUI.show_level.ONLY_AOD
+    });
+
     // 创建天气图标和温度文本（左下部分）
     weatherIconText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 120,
-      y: 275,
-      w: 120,
+      x: 117,
+      y: 272,
+      w: 80,
       h: 40,
       text: '25° ☀',
       color: 0xFFFFFF,
       text_size: 24,
       text_style: hmUI.text_style.NONE,
-      align_h: hmUI.align.CENTER_H,
+      align_h: hmUI.align.RIGHT,
       align_v: hmUI.align.CENTER_V,
       show_level: hmUI.show_level.ONLY_NORMAL
     });
